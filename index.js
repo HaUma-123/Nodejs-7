@@ -1,34 +1,43 @@
 const express = require("express");
 const axios = require("axios");
-const cors = require("cors");
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-const openWeatherApiKey = "ce5048473491559fe3db75ee1432b127"; // Replace with your OpenWeatherMap API key
+// Replace 'your_api_key_here' with your actual API key from NewsAPI
+const newsApiKey = '73b780144b2a4feb933d1c9436a2b989';
 
-app.use(cors()); // Enable CORS
+app.get('/news', async (req, res) => {
+  const query = req.query.q || 'space';
 
-app.get('/weather', async (req, res) => {
-  const cityName = req.query.city;
-
-  if (!cityName) {
-    return res.status(400).json({ error: 'City parameter is required' });
+  if (!query) {
+    return res.status(400).json({ error: 'Query parameter is required' });
   }
 
+  const apiUrl = `https://newsapi.org/v2/top-headlines?q=${query}&apiKey=${newsApiKey}`;
+
   try {
-    const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${openWeatherApiKey}&units=metric`);
-    if (response.data.cod !== 200) {
-      return res.status(404).json({ error: response.data.message });
+    const response = await axios.get(apiUrl);
+
+    if (response.status !== 200) {
+      throw new Error('Failed to fetch news');
     }
 
-    return res.json(response.data);
+    const articles = response.data.articles;
+
+    if (articles.length === 0) {
+      return res.status(404).json({ error: 'No news articles found for the query.' });
+    } else {
+      return res.json(articles);
+    }
   } catch (err) {
-    const errorMessage = err.response?.data?.message || err.message || 'Unknown error';
-    return res.status(500).json({ error: `An error occurred: ${errorMessage}` });
+    const errorMessage = err.response?.data?.message || err.message || '';
+    return res.status(500).json({
+      error: 'An error occurred: ' + errorMessage
+    });
   }
 });
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-});
+})
